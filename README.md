@@ -10,6 +10,7 @@ ART 独立部署包所用的第三方运行时镜像。
 |---|---|---|
 | `assets-7za-26.04` | `7za-26.04-x64.zip` | 7-Zip 26.04 独立版命令行（x64），供构建脚本解压组件包 |
 | `assets-nginx-1.28.3-el9` | `nginx-1.28.3-el9.tar.gz` | nginx 1.28.3，静态链接 OpenSSL 3 / PCRE2 / zlib，供 Linux 部署包携带 |
+| `assets-nginx-1.28.3-el7` | `nginx-1.28.3-el7.tar.gz` | 同上，构建于 glibc 2.17（CentOS 7.9），适用于 el7 / el8 |
 
 ## 说明
 
@@ -46,7 +47,19 @@ $ ldd nginx-1.28.3-el9/sbin/nginx
         /lib64/ld-linux-x86-64.so.2
 ```
 
+### 该用哪一份
+
+| 目标系统 | 用哪个 | 理由 |
+|---|---|---|
+| el9+ | `assets-nginx-1.28.3-el9` | 链接 `libcrypt.so.2`，属 glibc 自带 |
+| el7 / el8 | `assets-nginx-1.28.3-el7` | 链接 `libcrypt.so.1`，el7/el8 原生提供 |
+
+el7 那份在 el9 上也能跑（glibc 向后兼容，已实测），但它依赖 `libcrypt.so.1`——
+el9 上该库由 `libxcrypt-compat` 提供，最小化安装可能缺失。因此 el9 仍建议用 el9 那份。
+
 ### 构建方法
+
+
 
 在 **Rocky Linux 9.5**（glibc 2.34）上执行。构建机需能访问 nginx.org / openssl.org / GitHub。
 
@@ -111,14 +124,22 @@ sha256sum nginx-$NGINX_VER-el9.tar.gz
 
 ### 当前版本
 
+组件版本两份产物一致：
+
 | 项 | 值 |
 |---|---|
 | nginx | 1.28.3 |
 | OpenSSL | 3.0.16 |
 | PCRE2 | 10.44 |
 | zlib | 1.3.1 |
-| 构建于 | Rocky Linux 9.5（glibc 2.34） |
-| SHA256 | `8f7445ab700adb6d2163ebf50ee50fbf395f91c25fac9c31b4c87903a749d629` |
+
+| 资产 | 构建环境 | 最高 glibc 符号 | SHA256 |
+|---|---|---|---|
+| `nginx-1.28.3-el9.tar.gz` | Rocky Linux 9.5（glibc 2.34） | GLIBC_2.34 | `8f7445ab700adb6d2163ebf50ee50fbf395f91c25fac9c31b4c87903a749d629` |
+| `nginx-1.28.3-el7.tar.gz` | CentOS 7.9.2009（glibc 2.17） | GLIBC_2.17 | `1abbbc09fd76fa22596d5a38ecdbb7dfdfbf83f17bb7abf4ebd135ccab23bcea` |
+
+el7 构建机的额外前置：`yum install perl-IPC-Cmd`。
+OpenSSL 3 的 `Configure` 依赖该模块，CentOS 7 自带的 perl 5.16 未包含。
 
 ### 许可证
 
